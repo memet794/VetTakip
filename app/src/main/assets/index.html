@@ -416,7 +416,17 @@ hatches.forEach(r=>add("Kuluçkahane", "Yükleme: "+r.type,r.loadDate,"Yüklenen
 Object.entries(evadiData).forEach(([sp,v])=>(v.records||[]).forEach(r=>add("E. Vadi - "+sp,r.mode==="individual"?"Bireysel tedavi":"Toplu tedavi",r.date,"Bulgular: "+(r.clinical||"")+" | Teşhis: "+(r.diagnosis||"")+" | İlaçlar: "+medText(r)+" | Operasyon: "+opText(r))));
 dogTreatments.forEach(r=>add("Köpek",r.mode==="individual"?"Bireysel tedavi":"Toplu tedavi",r.date,"Bulgular: "+(r.clinical||"")+" | Teşhis: "+(r.diagnosis||"")+" | İlaçlar: "+medText(r)+" | Operasyon: "+opText(r)));
 rows.sort((x,y)=>reportDateValue(x.date).localeCompare(reportDateValue(y.date)));let label=period==="day"?"Gün sonu":period==="week"?"Hafta sonu":"Ay sonu";document.getElementById("reportPrint").innerHTML='<h2>VetTakip - '+label+' Raporu</h2><p><b>Dönem:</b> '+a+' - '+b+'</p><p><b>Toplam kayıt:</b> '+rows.length+'</p>'+(rows.length?rows.map((r,i)=>'<div class="record"><b>'+(i+1)+'. '+esc(r.section)+' · '+esc(r.kind)+'</b><p><b>Tarih:</b> '+esc(r.date)+'</p><p>'+esc(r.details)+'</p></div>').join(""):'<p>Bu tarih aralığında kayıt bulunamadı.</p>');}
-function printReport(){if(document.getElementById("reportPrint").innerText.includes("Rapor oluşturulmadı")){generateReport()}window.print()}
+function printReport(){
+    if(document.getElementById("reportPrint").innerText.includes("Rapor oluşturulmadı")){
+        generateReport();
+    }
+
+    if(window.VetTakipAndroid && typeof VetTakipAndroid.printPage === "function"){
+        VetTakipAndroid.printPage();
+    } else {
+        window.print();
+    }
+}
 function backup(){let json=JSON.stringify({kusevi:data,kediler:cats,kulucka:hatches,ataturkPark:parkRecords,kediEviIslemler:chOps,kediEviKediler:chCats,kediEviTedaviler:chTreatments,evadi:evadiData,kopekTedaviler:dogTreatments,kuseviTurler:names,evadiTurler:evadiNames},null,2);if(window.VetTakipAndroid&&typeof VetTakipAndroid.saveBackup==="function"){VetTakipAndroid.saveBackup(json);return}let a=document.createElement("a"),u=URL.createObjectURL(new Blob([json],{type:"application/json"}));a.href=u;a.download="VetTakip_Kusevi_Yedek.json";a.click();URL.revokeObjectURL(u)}
 function restore(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let z=JSON.parse(r.result);data=z.kusevi||z;cats=z.kediler||[];hatches=z.kulucka||[];parkRecords=z.ataturkPark||[];chOps=z.kediEviIslemler||[];chCats=z.kediEviKediler||[];chTreatments=z.kediEviTedaviler||[];evadiData=z.evadi||{};dogTreatments=z.kopekTedaviler||[];names=z.kuseviTurler||names;evadiNames=z.evadiTurler||evadiNames;persist();localStorage.setItem("vettakip_kediler",JSON.stringify(cats));localStorage.setItem("vettakip_kulucka",JSON.stringify(hatches));localStorage.setItem("vettakip_ataturk_park",JSON.stringify(parkRecords));saveCh("islemler",chOps);saveCh("kediler",chCats);saveCh("tedaviler",chTreatments); saveEVadiData();localStorage.setItem("vettakip_kopek_tedaviler",JSON.stringify(dogTreatments));localStorage.setItem("vettakip_kusevi_turler",JSON.stringify(names));localStorage.setItem("vettakip_evadi_turler",JSON.stringify(evadiNames));render();renderCats();renderHatches();renderPark();renderChOps();renderChCats();renderChTreatments();updateChCatSelect();renderEVadiList();renderDogHistory();alert("Yedek yüklendi.")}catch(x){alert("Dosya okunamadı.")}};r.readAsText(f);e.target.value=""}
 document.getElementById("reportDate").value=new Date().toISOString().slice(0,10);render();goDashboard();
