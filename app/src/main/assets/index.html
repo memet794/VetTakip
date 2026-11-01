@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#245746"><title>VetTakip - Kuşevi</title>
+<style>
+:root{--g:#245746;--p:#eaf3ee;--b:#f4f7f5;--l:#dce6df;--t:#20312a}*{box-sizing:border-box}body{margin:0;background:var(--b);color:var(--t);font:16px system-ui}header{background:var(--g);color:white;padding:20px}h1{margin:5px 0;font-size:25px}main{max-width:720px;margin:auto;padding:15px}.panel,.species{background:white;border:1px solid var(--l);border-radius:14px;padding:15px;margin:9px 0}.species{width:100%;display:flex;align-items:center;gap:12px;text-align:left;color:var(--t);font:inherit;cursor:pointer}.num{background:var(--p);color:var(--g);font-weight:800;padding:9px;border-radius:9px}.muted,small{color:#68776f}input,textarea,select{width:100%;padding:12px;border:1px solid #cbd8d0;border-radius:9px;font:inherit;margin:6px 0 12px}textarea{min-height:85px}label{font-weight:650;font-size:14px}button{border:0;border-radius:10px;padding:12px 14px;background:var(--g);color:white;font-weight:650;font-size:15px;cursor:pointer}.secondary{background:var(--p);color:var(--g)}.danger{background:#a43d3d}.hidden{display:none}.tabs{display:flex;gap:8px;margin:12px 0}.tabs button{flex:1}.record{background:#fbfdfb;border:1px solid var(--l);border-radius:11px;padding:12px;margin:9px 0}.back{background:transparent;color:white;padding:0}footer{text-align:center;color:#68776f;font-size:12px;padding:18px}
+.home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.home-card{min-height:78px;font-size:17px;text-align:center;background:white;color:var(--g);border:1px solid var(--l)}@media(min-width:560px){.home-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}.table-wrap{width:100%;overflow-x:auto;margin:8px 0}.med-table{width:100%;border-collapse:collapse;min-width:610px;font-size:13px}.med-table th,.med-table td{border:1px solid var(--l);padding:6px;text-align:left}.med-table th{background:var(--p)}.med-table input,.med-table select{margin:0;padding:8px;min-width:100px;font-size:13px}.med-table .route-select{min-width:125px}.med-table button{padding:7px 9px;font-size:12px}.add-med{margin:3px 0 12px}@media print{body *{visibility:hidden!important}#reportPrint,#reportPrint *{visibility:visible!important}#reportPrint{position:absolute;left:0;top:0;width:100%;padding:12px}header,.no-print{display:none!important}.record{break-inside:avoid;border:1px solid #999}}</style></head><body>
+<header><button id="homeButton" class="back hidden" onclick="goDashboard()">← Ana sayfa</button><button id="back" class="back hidden" onclick="home()">← Kuşevi listesi</button><small>VETTAKİP · HAYVAN TAKİP</small><h1 id="title">Kuşevi</h1><div id="sub">Tür kayıtları ve tedavi takip ekranı</div></header>
+<main>
+<section id="homeDashboard">
+ <div class="panel"><b>VetTakip</b><p class="muted">Kayıt girmek istediğiniz bölümü seçin.</p></div>
+ <div class="home-grid">
+  <button class="home-card" onclick="mainTab('kusevi')">Kuşevi</button>
+  <button class="home-card" onclick="mainTab('kedi')">Kedi</button>
+  <button class="home-card" onclick="mainTab('kulu')">Kuluçkahane</button>
+  <button class="home-card" onclick="mainTab('park')">A. Park</button>
+  <button class="home-card" onclick="mainTab('catHouse')">Kedi Evi</button>
+  <button class="home-card" onclick="mainTab('evadi')">E. Vadi</button>
+  <button class="home-card" onclick="mainTab('dog')">Köpek</button>
+  <button class="home-card" onclick="mainTab('reports')">Raporlar / Yazdır</button>
+ </div>
+ <div class="panel"><button class="secondary" onclick="backup()">Yedek indir</button> <button class="secondary" onclick="document.getElementById('file').click()">Yedek yükle</button></div>
+</section>
+<section id="reports" class="hidden"><div class="panel no-print"><h3>Toplu kayıt raporu</h3><p class="muted">Gün sonu, hafta sonu veya ay sonu raporunu seçip yazdırabilirsiniz.</p><label>Rapor türü</label><select id="reportPeriod"><option value="day">Gün sonu</option><option value="week">Hafta sonu (son 7 gün)</option><option value="month">Ay sonu (bu ay)</option></select><label>Rapor tarihi</label><input id="reportDate" type="date"><button onclick="generateReport()">Raporu oluştur</button> <button class="secondary" onclick="printReport()">Yazdır / PDF kaydet</button></div><div id="reportPrint" class="panel"><p class="muted">Rapor oluşturulmadı.</p></div></section>
+<section id="list" class="hidden"><div class="panel"><b>Kuşevi</b><p class="muted">Bir tür seçin. Her türün hayvan adedi ve tedavi kayıtları ayrı tutulur.</p></div><div class="actions"><button class="secondary" onclick="addSpecies('kusevi')">+ Hayvan türü ekle</button></div><div id="species"></div><button class="secondary" onclick="backup()">Yedek indir</button> <button class="secondary" onclick="document.getElementById('file').click()">Yedek yükle</button><input id="file" class="hidden" type="file" accept="application/json" onchange="restore(event)"></section>
+<section id="detail" class="hidden">
+<div class="panel"><label>Hayvan adedi</label><input id="count" type="number" min="0" step="1" placeholder="Hayvan sayısı"><button onclick="saveCount()">Adedi kaydet</button><div id="saved" class="muted"></div></div>
+<div class="tabs"><button id="it" onclick="tab('bireysel')">Bireysel tedavi</button><button id="gt" class="secondary" onclick="tab('toplu')">Toplu tedavi</button></div>
+<div class="panel"><h3 id="formtitle">Bireysel tedavi</h3><form id="form" onsubmit="save(event)">
+<label>Klinik bulgular</label><textarea id="clinical" required></textarea>
+<label>Teşhis - şüphe</label><textarea id="diagnosis" required></textarea>
+<label>Tedavi ilaçları</label>
+   <div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>İlaç</th><th>Doz</th><th>Uygulama yolu</th><th></th></tr></thead><tbody id="medKusevi"></tbody></table></div>
+   <button type="button" class="secondary add-med" onclick="addMedRow('medKusevi')">+ İlaç satırı ekle</button>
+   <label>Operasyon</label>
+   <div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>Operasyon adı</th><th></th></tr></thead><tbody id="opKusevi"></tbody></table></div>
+   <button type="button" class="secondary add-med" onclick="addOperationRow('opKusevi')">+ Operasyon satırı ekle</button><button>Kaydet</button></form></div>
+<div class="panel"><h3>Kayıt geçmişi</h3><div id="history"></div></div></section>
+
+<section id="cats" class="hidden">
+ <div class="panel">
+  <h2 style="margin-top:0">Kedi kayıtları</h2>
+  <form id="catForm" onsubmit="saveCat(event)">
+   <label>Kedi adı / kayıt numarası</label><input id="catName" placeholder="İsteğe bağlı">
+   <label>Cinsiyet</label><select id="catSex" required><option value="">Seçiniz</option><option>Dişi</option><option>Erkek</option><option>Bilinmiyor</option></select>
+   <label>Renk</label><input id="catColor" required placeholder="Örn. tekir, siyah-beyaz">
+   <label>Giriş tarihi</label><input id="catEntry" type="date" required>
+   <label>Çıkış tarihi</label><input id="catExit" type="date">
+   <label>Klinik bulgular</label><textarea id="catClinical" required></textarea>
+   <label>Teşhis - şüphe</label><textarea id="catDiagnosis" required></textarea>
+   <label>Tedavi ilaçları</label>
+   <div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>İlaç</th><th>Doz</th><th>Uygulama yolu</th><th></th></tr></thead><tbody id="medCat"></tbody></table></div>
+   <button type="button" class="secondary add-med" onclick="addMedRow('medCat')">+ İlaç satırı ekle</button>
+   <label>Operasyon</label>
+   <div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>Operasyon adı</th><th></th></tr></thead><tbody id="opCat"></tbody></table></div>
+   <button type="button" class="secondary add-med" onclick="addOperationRow('opCat')">+ Operasyon satırı ekle</button>
+   <button type="submit">Kedi kaydını kaydet</button>
+  </form>
+ </div>
+ <div class="panel"><h3 style="margin-top:0">Kedi kayıt listesi</h3><div id="catHistory"></div></div>
+</section>
+
+<section id="hatchery" class="hidden">
+<div class="panel"><h2 style="margin-top:0">Yeni kuluçka kaydı</h2>
+<form id="hatchForm" onsubmit="saveHatch(event)">
+<label>Yüklenen yumurta türü</label><select id="eggType" required><option value="">Tür seçiniz</option><option>Tavuk</option><option>Bıldırcın</option><option>Keklik</option><option>Sülün</option><option>Hindi</option><option>Bec</option></select>
+<label>Yükleme tarihi</label><input id="loadDate" type="date" required>
+<label>Yüklenen yumurta adeti</label><input id="loadedEggs" type="number" min="1" step="1" required>
+<div class="panel" style="background:#f4f7f5"><div class="muted">Tahmini çıkım süresi</div><b id="incubationInfo">Tür seçildiğinde hesaplanır</b><div id="hatchDateInfo" class="muted"></div></div>
+<label>Çıkan yumurta adeti</label><input id="hatchedEggs" type="number" min="0" step="1" value="0" required>
+<button type="submit">Kuluçka kaydını kaydet</button></form></div>
+<div class="panel"><h3>Çıkım hatırlatmaları</h3><div id="hatchReminders"></div></div>
+<div class="panel"><h3>Kuluçka kayıt geçmişi</h3><div id="hatchHistory"></div></div>
+</section>
+
+<section id="park" class="hidden">
+ <div class="panel">
+  <h2 style="margin-top:0">Atatürk Parkı - Kanatlı hayvan kayıtları</h2>
+  <form id="parkForm" onsubmit="savePark(event)">
+   <label>Kanatlı hayvan türü</label><input id="parkSpecies" required placeholder="Örn. tavus kuşu, ördek, sülün">
+   <label>Klinik bulgular</label><textarea id="parkClinical" required></textarea>
+   <label>Teşhis - şüphe</label><textarea id="parkDiagnosis" required></textarea>
+   <label>Tedavi ilaçları</label>
+   <div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>İlaç</th><th>Doz</th><th>Uygulama yolu</th><th></th></tr></thead><tbody id="medPark"></tbody></table></div>
+   <button type="button" class="secondary add-med" onclick="addMedRow('medPark')">+ İlaç satırı ekle</button>
+   <label>Operasyon</label>
+   <div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>Operasyon adı</th><th></th></tr></thead><tbody id="opPark"></tbody></table></div>
+   <button type="button" class="secondary add-med" onclick="addOperationRow('opPark')">+ Operasyon satırı ekle</button>
+   <button type="submit">Kaydı kaydet</button>
+  </form>
+ </div>
+ <div class="panel"><h3 style="margin-top:0">Kayıt geçmişi</h3><div id="parkHistory"></div></div>
+</section>
+
+<section id="catHouse" class="hidden">
+ <div class="tabs">
+  <button id="chOpsTab" onclick="catHouseTab('ops')">İşlemler</button>
+  <button id="chCatsTab" class="secondary" onclick="catHouseTab('cats')">Kediler</button>
+  <button id="chTreatTab" class="secondary" onclick="catHouseTab('treat')">Tedavi</button>
+ </div>
+ <section id="chOps">
+  <div class="panel"><h2 style="margin-top:0">İşlemler</h2>
+   <form id="chOpsForm" onsubmit="saveChOp(event)">
+    <label>İşlem tipi</label><input id="chOpType" type="text" required placeholder="İşlem tipini yazın (örn. temizlik, dezenfeksiyon, toplu tedavi)">
+    <label>Tarih</label><input id="chOpDate" type="date" required>
+    <label>İşlem açıklaması</label><textarea id="chOpNote" required placeholder="Yapılan işlem, kullanılan ürün, miktar veya uygulama ayrıntısı"></textarea>
+    <button type="submit">İşlemi kaydet</button>
+   </form>
+  </div><div class="panel"><h3>İşlem geçmişi</h3><div id="chOpsHistory"></div></div>
+ </section>
+ <section id="chCats" class="hidden">
+  <div class="panel"><h2 style="margin-top:0">Kedi kaydı</h2>
+   <form id="chCatForm" onsubmit="saveChCat(event)">
+    <label>Çip no</label><input id="chChip" required placeholder="Mikroçip numarası">
+    <label>Yaş</label><input id="chAge" required placeholder="Örn. 3 yaş / yaklaşık 8 ay">
+    <label>Hayvanın yeri</label><input id="chPlace" required placeholder="Oda, bölüm, kafes vb.">
+    <label>Yıllara göre doğurduğu yavru sayısı</label>
+    <div id="birthYears"></div>
+    <button type="button" class="secondary" onclick="addBirthYear()">+ Yıl ekle</button>
+    <div style="height:10px"></div><button type="submit">Kedi kaydını kaydet</button>
+   </form>
+  </div><div class="panel"><h3>Kedi listesi</h3><div id="chCatsHistory"></div></div>
+ </section>
+ <section id="chTreat" class="hidden">
+  <div class="panel"><h2 style="margin-top:0">Tedavi kaydı</h2>
+   <form id="chTreatForm" onsubmit="saveChTreat(event)">
+    <label>Kedi (çip no)</label><select id="chTreatCat" required><option value="">Kedi seçiniz</option></select>
+    <label>Tarih</label><input id="chTreatDate" type="date" required>
+    <label>Klinik bulgular</label><textarea id="chTreatClinical" required></textarea>
+    <label>Teşhis - şüphe</label><textarea id="chTreatDiagnosis" required></textarea>
+    <label>Tedavi ilaçları</label>
+   <div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>İlaç</th><th>Doz</th><th>Uygulama yolu</th><th></th></tr></thead><tbody id="medCatHouse"></tbody></table></div>
+   <button type="button" class="secondary add-med" onclick="addMedRow('medCatHouse')">+ İlaç satırı ekle</button>
+   <label>Operasyon</label>
+   <div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>Operasyon adı</th><th></th></tr></thead><tbody id="opCatHouse"></tbody></table></div>
+   <button type="button" class="secondary add-med" onclick="addOperationRow('opCatHouse')">+ Operasyon satırı ekle</button>
+    <button type="submit">Tedaviyi kaydet</button>
+   </form>
+  </div><div class="panel"><h3>Tedavi geçmişi</h3><div id="chTreatHistory"></div></div>
+ </section>
+</section>
+
+<section id="evadiList" class="hidden">
+ <div class="panel"><h2 style="margin-top:0">E. Vadi</h2><p class="muted">Hayvan türünü seçerek adet ve tedavi kayıtlarına ulaşın.</p></div>
+ <div class="actions"><button class="secondary" onclick="addSpecies('evadi')">+ Hayvan türü ekle</button></div><div id="evadiSpecies"></div>
+</section>
+<section id="evadiDetail" class="hidden">
+ <button class="secondary" onclick="evadiHome()">← E. Vadi tür listesi</button>
+ <div class="panel"><h2 id="evadiAnimalTitle" style="margin-top:0"></h2>
+  <label>Hayvan adedi</label><input id="evadiCount" type="number" min="0" step="1">
+  <button onclick="saveEVadiCount()">Adedi kaydet</button><div id="evadiCountSaved" class="muted"></div>
+ </div>
+ <div class="tabs"><button id="evadiIndTab" onclick="evadiMode('individual')">Bireysel tedavi</button><button id="evadiGroupTab" class="secondary" onclick="evadiMode('group')">Toplu tedavi</button></div>
+ <div class="panel"><h3 id="evadiFormTitle">Bireysel tedavi</h3>
+  <form id="evadiForm" onsubmit="saveEVadiTreatment(event)">
+   <label>Klinik bulgular</label><textarea id="evadiClinical" required></textarea>
+   <label>Teşhis - şüphe</label><textarea id="evadiDiagnosis" required></textarea>
+   <label>Tedavi ilaçları</label>
+   <div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>İlaç</th><th>Doz</th><th>Uygulama yolu</th><th></th></tr></thead><tbody id="medEVadi"></tbody></table></div>
+   <button type="button" class="secondary add-med" onclick="addMedRow('medEVadi')">+ İlaç satırı ekle</button>
+   <label>Operasyon</label>
+   <div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>Operasyon adı</th><th></th></tr></thead><tbody id="opEVadi"></tbody></table></div>
+   <button type="button" class="secondary add-med" onclick="addOperationRow('opEVadi')">+ Operasyon satırı ekle</button>
+   <button type="submit">Tedavi kaydını kaydet</button>
+  </form>
+ </div>
+ <div class="panel"><h3>Kayıt geçmişi</h3><div id="evadiHistory"></div></div>
+</section>
+
+<section id="dogSection" class="hidden">
+ <div class="tabs">
+  <button id="dogIndTab" onclick="dogMode('individual')">Bireysel tedavi</button>
+  <button id="dogGroupTab" class="secondary" onclick="dogMode('group')">Toplu tedavi</button>
+ </div>
+ <div class="panel">
+  <h2 id="dogFormTitle" style="margin-top:0">Bireysel tedavi</h2>
+  <form id="dogForm" onsubmit="saveDogTreatment(event)">
+   <label>Klinik bulgular</label><textarea id="dogClinical" required></textarea>
+   <label>Teşhis - şüphe</label><textarea id="dogDiagnosis" required></textarea>
+   <label>Tedavi ilaçları</label>
+   <div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>İlaç</th><th>Doz</th><th>Uygulama yolu</th><th></th></tr></thead><tbody id="medDog"></tbody></table></div>
+   <button type="button" class="secondary add-med" onclick="addMedRow('medDog')">+ İlaç satırı ekle</button>
+   <label>Operasyon</label>
+   <div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>Operasyon adı</th><th></th></tr></thead><tbody id="opDog"></tbody></table></div>
+   <button type="button" class="secondary add-med" onclick="addOperationRow('opDog')">+ Operasyon satırı ekle</button>
+   <button type="submit">Kaydet</button>
+  </form>
+ </div>
+ <div class="panel"><h3>Kayıt geçmişi</h3><div id="dogHistory"></div></div>
+</section>
+<footer>Veriler cihazın tarayıcı hafızasında tutulur. Tarayıcı verilerini temizlemeden önce yedek alın.</footer></main>
+<script>
+const defaultSpecies=["Siyam alev sırtlı sülün","Sultan tavuğu","Elmas sülün","Yeşil sülün","Karışık sülün","Gümüş sülün","Gerze tavuğu","Ayem Cemani","Ördek","Hindi","Bıldırcın","Tavus kuşu","Brahma tavuğu","Mavi kulaklı sülün","Bec tavuğu","Keklik","Foneks tavuğu","Swinhoe sülün","Rahibe fizan","Hint horozları"];
+let names=JSON.parse(localStorage.getItem("vettakip_kusevi_turler")||"null")||defaultSpecies;
+
+let data=JSON.parse(localStorage.getItem("vettakip_kusevi")||"{}"),current="",kind="bireysel";
+let editTarget=null;
+let cats=JSON.parse(localStorage.getItem("vettakip_kediler")||"[]");
+let hatches=JSON.parse(localStorage.getItem("vettakip_kulucka")||"[]");
+let parkRecords=JSON.parse(localStorage.getItem("vettakip_ataturk_park")||"[]");
+let chOps=JSON.parse(localStorage.getItem("vettakip_kedievi_islemler")||"[]");
+let chCats=JSON.parse(localStorage.getItem("vettakip_kedievi_kediler")||"[]");
+let chTreatments=JSON.parse(localStorage.getItem("vettakip_kedievi_tedaviler")||"[]");
+let evadiData=JSON.parse(localStorage.getItem("vettakip_evadi")||"{}");
+let dogTreatments=JSON.parse(localStorage.getItem("vettakip_kopek_tedaviler")||"[]");
+let dogTreatmentMode="individual";
+let evadiCurrent="",evadiTreatmentMode="individual";
+const defaultEVadi=[...defaultSpecies,"Tavşan","Kedi","Keçi","Güvercin"];
+let evadiNames=JSON.parse(localStorage.getItem("vettakip_evadi_turler")||"null")||defaultEVadi;
+const incubationDays={Tavuk:20,Bıldırcın:17,Keklik:21,Sülün:22,Hindi:27,Bec:27};
+function goDashboard(){
+ ["list","detail","cats","hatchery","park","catHouse","evadiList","evadiDetail","dogSection","reports"].forEach(id=>document.getElementById(id).classList.add("hidden"));
+ document.getElementById("homeDashboard").classList.remove("hidden");
+ document.getElementById("homeButton").classList.add("hidden");
+ document.getElementById("back").classList.add("hidden");
+ document.getElementById("title").textContent="VetTakip";
+ document.getElementById("sub").textContent="Hayvan ve tesis takip uygulaması";
+}
+function mainTab(which){
+ ["list","detail","cats","hatchery","park","catHouse","evadiList","evadiDetail","dogSection","reports"].forEach(id=>document.getElementById(id).classList.add("hidden"));
+ document.getElementById("homeDashboard").classList.add("hidden");
+ document.getElementById("homeButton").classList.remove("hidden");
+ document.getElementById("back").classList.add("hidden");
+ const target={kusevi:"list",kedi:"cats",kulu:"hatchery",park:"park",catHouse:"catHouse",evadi:"evadiList",dog:"dogSection",reports:"reports"}[which];
+ if(target)document.getElementById(target).classList.remove("hidden");
+ document.getElementById("title").textContent={kusevi:"Kuşevi",kedi:"Kedi",kulu:"Kuluçkahane",park:"A. Park",catHouse:"Kedi Evi",evadi:"E. Vadi",dog:"Köpek",reports:"Raporlar / Yazdır"}[which]||"VetTakip";
+ document.getElementById("sub").textContent={kusevi:"Tür kayıtları ve tedavi takip ekranı",kedi:"Kedi kayıt ve tedavi takip ekranı",kulu:"Yumurta yükleme ve çıkım takibi",park:"Kanatlı hayvan klinik kayıtları",catHouse:"Kedi evi yönetimi",evadi:"Hayvan türleri ve tedavi takibi",dog:"Köpek tedavi kayıtları",reports:"Kayıtları tarih aralığına göre toplu raporlayın"}[which]||"";
+ if(which==="kedi")renderCats();
+ if(which==="kulu"){renderHatches();updateIncubationInfo();}
+ if(which==="park")renderPark();
+ if(which==="catHouse"){catHouseTab("ops");renderChOps();renderChCats();renderChTreatments();}
+ if(which==="evadi")renderEVadiList();
+ if(which==="dog"){dogMode("individual");renderDogHistory();}
+ if(which==="reports"){document.getElementById("reportDate").value=document.getElementById("reportDate").value||new Date().toISOString().slice(0,10);generateReport();}
+}
+function saveCat(e){
+ e.preventDefault();
+ cats.unshift({name:catName.value.trim(),sex:catSex.value,color:catColor.value.trim(),entry:catEntry.value,exit:catExit.value,clinical:catClinical.value.trim(),diagnosis:catDiagnosis.value.trim(),meds:collectMeds("medCat"),operations:collectOperations("opCat")});
+ localStorage.setItem("vettakip_kediler",JSON.stringify(cats));e.target.reset();document.getElementById("medCat").innerHTML="";addMedRow("medCat");document.getElementById("opCat").innerHTML="";addOperationRow("opCat");renderCats();
+}
+function renderCats(){
+ const root=document.getElementById("catHistory");
+ root.innerHTML=cats.length?cats.map((c,i)=>'<div class="record"><b>'+(esc(c.name)||"Kedi kaydı "+(cats.length-i))+'</b><p><b>Cinsiyet:</b> '+esc(c.sex)+' · <b>Renk:</b> '+esc(c.color)+'</p><p><b>Giriş:</b> '+esc(c.entry)+' · <b>Çıkış:</b> '+(esc(c.exit)||"Henüz çıkış yapılmadı")+'</p><p><b>Klinik bulgular:</b><br>'+esc(c.clinical)+'</p><p><b>Teşhis - şüphe:</b><br>'+esc(c.diagnosis)+'</p>'+renderMeds(c.meds,c.treatment)+renderOperations(c.operations)+'<button class="danger" onclick="deleteCat('+i+')">Kaydı sil</button></div>').join(""):'<p class="muted">Henüz kedi kaydı yok.</p>';
+}
+function deleteCat(i){if(confirm("Kedi kaydı silinsin mi?")){cats.splice(i,1);localStorage.setItem("vettakip_kediler",JSON.stringify(cats));renderCats()}}
+
+
+function plusDays(iso,n){let d=new Date(iso+"T12:00:00");d.setDate(d.getDate()+n);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function dateTR(iso){return iso?new Date(iso+"T12:00:00").toLocaleDateString("tr-TR"):""}
+function updateIncubationInfo(){let t=eggType.value,d=loadDate.value;incubationInfo.textContent=t?incubationDays[t]+" gün":"Tür seçildiğinde hesaplanır";hatchDateInfo.textContent=t&&d?"Tahmini çıkım tarihi: "+dateTR(plusDays(d,incubationDays[t])):"Yükleme tarihini seçin."}
+document.addEventListener("change",e=>{if(e.target.id==="eggType"||e.target.id==="loadDate")updateIncubationInfo()});
+function saveHatch(e){e.preventDefault();let t=eggType.value,l=Number(loadedEggs.value),h=Number(hatchedEggs.value);if(!Number.isInteger(l)||l<1||!Number.isInteger(h)||h<0||h>l){alert("Çıkan yumurta adedi, yüklenen adetten fazla olamaz.");return}hatches.unshift({type:t,days:incubationDays[t],loadDate:loadDate.value,loaded:l,hatched:h,expected:plusDays(loadDate.value,incubationDays[t])});localStorage.setItem("vettakip_kulucka",JSON.stringify(hatches));e.target.reset();updateIncubationInfo();renderHatches()}
+function renderHatches(){let r=document.getElementById("hatchReminders"),hist=document.getElementById("hatchHistory"),today=new Date();today.setHours(0,0,0,0);let a=[...hatches].sort((x,y)=>x.expected.localeCompare(y.expected));r.innerHTML=a.length?a.map(h=>{let d=new Date(h.expected+"T00:00:00"),n=Math.round((d-today)/86400000),st=n<0?"Çıkım tarihi geçti":n===0?"Bugün çıkım bekleniyor":"Çıkıma "+n+" gün kaldı";return '<div class="record"><b>'+esc(h.type)+'</b> · '+dateTR(h.expected)+'<p>'+st+'<br>Yüklenen: '+h.loaded+' · Çıkan: '+h.hatched+'</p></div>'}).join(""):'<p class="muted">Henüz hatırlatma yok.</p>';hist.innerHTML=hatches.length?hatches.map((h,i)=>'<div class="record"><b>'+esc(h.type)+'</b><p>Yükleme: '+dateTR(h.loadDate)+' · Tahmini çıkım: '+dateTR(h.expected)+'</p><p>Yüklenen yumurta: '+h.loaded+'</p><label>Çıkan yumurta adeti</label><input id="hatch_'+i+'" type="number" min="0" max="'+h.loaded+'" value="'+h.hatched+'"><button onclick="updateHatch('+i+')">Adedi güncelle</button> <button class="danger" onclick="removeHatch('+i+')">Sil</button></div>').join(""):'<p class="muted">Henüz kuluçka kaydı yok.</p>'}
+function updateHatch(i){let v=Number(document.getElementById("hatch_"+i).value);if(!Number.isInteger(v)||v<0||v>hatches[i].loaded){alert("Adet bilgilerini kontrol edin.");return}hatches[i].hatched=v;localStorage.setItem("vettakip_kulucka",JSON.stringify(hatches));renderHatches()}
+function removeHatch(i){if(confirm("Kuluçka kaydı silinsin mi?")){hatches.splice(i,1);localStorage.setItem("vettakip_kulucka",JSON.stringify(hatches));renderHatches()}}
+
+function savePark(e){e.preventDefault();parkRecords.unshift({species:parkSpecies.value.trim(),date:new Date().toLocaleString("tr-TR"),clinical:parkClinical.value.trim(),diagnosis:parkDiagnosis.value.trim(),meds:collectMeds("medPark"),operations:collectOperations("opPark")});localStorage.setItem("vettakip_ataturk_park",JSON.stringify(parkRecords));e.target.reset();document.getElementById("medPark").innerHTML="";addMedRow("medPark");document.getElementById("opPark").innerHTML="";addOperationRow("opPark");renderPark()}
+function renderPark(){let root=document.getElementById("parkHistory");root.innerHTML=parkRecords.length?parkRecords.map((r,i)=>'<div class="record"><b>'+esc(r.species)+'</b> <small>· '+esc(r.date)+'</small><p><b>Klinik bulgular:</b><br>'+esc(r.clinical)+'</p><p><b>Teşhis - şüphe:</b><br>'+esc(r.diagnosis)+'</p>'+renderMeds(r.meds,r.treatment)+renderOperations(r.operations)+'<button class="secondary" onclick="editRecord(&quot;park&quot;, ' +i+')">Düzenle</button> <button class="danger" onclick="deletePark('+i+')">Kaydı sil</button></div>').join(""):'<p class="muted">Henüz kayıt yok.</p>'}
+function deletePark(i){if(confirm("Bu kayıt silinsin mi?")){parkRecords.splice(i,1);localStorage.setItem("vettakip_ataturk_park",JSON.stringify(parkRecords));renderPark()}}
+
+function saveCh(key,value){localStorage.setItem("vettakip_kedievi_"+key,JSON.stringify(value))}
+function catHouseTab(which){
+ ["ops","cats","treat"].forEach(k=>document.getElementById("ch"+(k==="ops"?"Ops":k==="cats"?"Cats":"Treat")).classList.toggle("hidden",k!==which));
+ chOpsTab.className=which==="ops"?"":"secondary";chCatsTab.className=which==="cats"?"":"secondary";chTreatTab.className=which==="treat"?"":"secondary";
+}
+function addBirthYear(year="",count=""){
+ let wrap=document.createElement("div");wrap.className="record birth-row";
+ wrap.innerHTML='<label>Yıl</label><input class="birth-year" type="number" min="2000" max="2100" placeholder="Örn. 2025" value="'+year+'"><label>Doğurduğu yavru sayısı</label><input class="birth-count" type="number" min="0" step="1" placeholder="Adet" value="'+count+'"><button type="button" class="danger" onclick="this.parentElement.remove()">Satırı kaldır</button>';
+ birthYears.appendChild(wrap);
+}
+function saveChCat(e){
+ e.preventDefault();let births=[...document.querySelectorAll("#birthYears .birth-row")].map(r=>({year:r.querySelector(".birth-year").value,count:Number(r.querySelector(".birth-count").value)})).filter(x=>x.year!=="");
+ if(births.some(x=>!Number.isInteger(Number(x.year))||!Number.isInteger(x.count)||x.count<0)){alert("Yıl ve yavru sayılarını kontrol edin.");return}
+ let chip=chChip.value.trim();if(chCats.some(c=>c.chip===chip)){alert("Bu çip numarası zaten kayıtlı.");return}
+ chCats.unshift({chip,age:chAge.value.trim(),place:chPlace.value.trim(),births});
+ saveCh("kediler",chCats);e.target.reset();birthYears.innerHTML="";addBirthYear();renderChCats();updateChCatSelect();
+}
+function renderChCats(){
+ chCatsHistory.innerHTML=chCats.length?chCats.map((c,i)=>'<div class="record"><b>Çip no: '+esc(c.chip)+'</b><p><b>Yaş:</b> '+esc(c.age)+' · <b>Yer:</b> '+esc(c.place)+'</p><p><b>Yıllara göre yavru sayısı:</b><br>'+(c.births||[]).map(b=>esc(b.year)+': '+b.count).join("<br>")+'</p><p><b>Tedavi geçmişi:</b><br>'+chTreatments.filter(t=>t.chip===c.chip).length+' kayıt</p><button class="danger" onclick="deleteChCat('+i+')">Kedi kaydını sil</button></div>').join(""):'<p class="muted">Henüz kedi kaydı yok.</p>';
+}
+function deleteChCat(i){if(confirm("Kedi kaydı silinsin mi? Tedavi kayıtları da silinecek.")){let chip=chCats[i].chip;chCats.splice(i,1);chTreatments=chTreatments.filter(t=>t.chip!==chip);saveCh("kediler",chCats);saveCh("tedaviler",chTreatments);renderChCats();renderChTreatments();updateChCatSelect()}}
+function updateChCatSelect(){let sel=document.getElementById("chTreatCat");if(!sel)return;let old=sel.value;sel.innerHTML='<option value="">Kedi seçiniz</option>'+chCats.map(c=>'<option value="'+esc(c.chip)+'">'+esc(c.chip)+'</option>').join("");if(chCats.some(c=>c.chip===old))sel.value=old}
+function saveChOp(e){e.preventDefault();chOps.unshift({type:chOpType.value,date:chOpDate.value,note:chOpNote.value.trim()});saveCh("islemler",chOps);e.target.reset();renderChOps()}
+function renderChOps(){chOpsHistory.innerHTML=chOps.length?chOps.map((r,i)=>'<div class="record"><b>'+esc(r.type)+'</b> <small>· '+esc(r.date)+'</small><p>'+esc(r.note)+'</p><button class="danger" onclick="deleteChOp('+i+')">Sil</button></div>').join(""):'<p class="muted">Henüz işlem kaydı yok.</p>'}
+function deleteChOp(i){if(confirm("İşlem kaydı silinsin mi?")){chOps.splice(i,1);saveCh("islemler",chOps);renderChOps()}}
+function saveChTreat(e){e.preventDefault();try{if(!document.getElementById("chTreatCat").value){alert("Önce kedi çip numarası seçin.");return}chTreatments.unshift({chip:document.getElementById("chTreatCat").value,date:document.getElementById("chTreatDate").value,clinical:document.getElementById("chTreatClinical").value.trim(),diagnosis:document.getElementById("chTreatDiagnosis").value.trim(),meds:collectMeds("medCatHouse"),operations:collectOperations("opCatHouse")});saveCh("tedaviler",chTreatments);e.target.reset();document.getElementById("medCatHouse").innerHTML="";addMedRow("medCatHouse");document.getElementById("opCatHouse").innerHTML="";addOperationRow("opCatHouse");renderChTreatments();renderChCats();updateChCatSelect();alert("Tedavi kaydı kaydedildi.")}catch(err){console.error(err);alert("Tedavi kaydedilemedi. Tarayıcı depolamasını kontrol edin.")}}
+function renderChTreatments(){chTreatHistory.innerHTML=chTreatments.length?chTreatments.map((t,i)=>'<div class="record"><b>Çip no: '+esc(t.chip)+'</b> <small>· '+esc(t.date)+'</small><p><b>Klinik bulgular:</b><br>'+esc(t.clinical)+'</p><p><b>Teşhis - şüphe:</b><br>'+esc(t.diagnosis)+'</p>'+renderMeds(t.meds,t.treatment)+renderOperations(t.operations)+'<button class="secondary" onclick="editRecord(&quot;chTreat&quot;, ' +i+')">Düzenle</button> <button class="danger" onclick="deleteChTreat('+i+')">Sil</button></div>').join(""):'<p class="muted">Henüz tedavi kaydı yok.</p>'}
+function deleteChTreat(i){if(confirm("Tedavi kaydı silinsin mi?")){chTreatments.splice(i,1);saveCh("tedaviler",chTreatments);renderChTreatments();renderChCats()}}
+
+function saveEVadiData(){localStorage.setItem("vettakip_evadi",JSON.stringify(evadiData))}
+function dogMode(m){dogTreatmentMode=m;dogFormTitle.textContent=m==="individual"?"Bireysel tedavi":"Toplu tedavi";dogIndTab.className=m==="individual"?"":"secondary";dogGroupTab.className=m==="group"?"":"secondary";dogForm.reset()}
+function saveDogTreatment(e){e.preventDefault();try{dogTreatments.unshift({mode:dogTreatmentMode,date:new Date().toLocaleString("tr-TR"),clinical:document.getElementById("dogClinical").value.trim(),diagnosis:document.getElementById("dogDiagnosis").value.trim(),meds:collectMeds("medDog"),operations:collectOperations("opDog")});localStorage.setItem("vettakip_kopek_tedaviler",JSON.stringify(dogTreatments));e.target.reset();document.getElementById("medDog").innerHTML="";addMedRow("medDog");document.getElementById("opDog").innerHTML="";addOperationRow("opDog");renderDogHistory();alert("Tedavi kaydı kaydedildi.")}catch(err){console.error(err);alert("Tedavi kaydedilemedi. Tarayıcı depolamasını kontrol edin.")}}
+function renderDogHistory(){dogHistory.innerHTML=dogTreatments.length?dogTreatments.map((r,i)=>'<div class="record"><b>'+(r.mode==="individual"?"Bireysel tedavi":"Toplu tedavi")+'</b> <small>· '+esc(r.date)+'</small><p><b>Klinik bulgular:</b><br>'+esc(r.clinical||"")+'</p><p><b>Teşhis - şüphe:</b><br>'+esc(r.diagnosis||"")+'</p><p><b>Tedavi:</b><br>'+renderMeds(r.meds,r.treatment)+renderOperations(r.operations)+'<button class="secondary" onclick="editRecord(&quot;dog&quot;, ' +i+')">Düzenle</button> <button class="danger" onclick="deleteDogTreatment('+i+')">Kaydı sil</button></div>').join(""):'<p class="muted">Henüz tedavi kaydı yok.</p>'}
+function deleteDogTreatment(i){if(confirm("Tedavi kaydı silinsin mi?")){dogTreatments.splice(i,1);localStorage.setItem("vettakip_kopek_tedaviler",JSON.stringify(dogTreatments));renderDogHistory()}}
+
+function addSpecies(where){
+ let raw=prompt("Eklenecek hayvan türünün adını yazın:");if(!raw)return;let name=raw.trim();if(!name)return;
+ let arr=where==="kusevi"?names:evadiNames;
+ if(arr.some(x=>x.toLocaleLowerCase("tr-TR")===name.toLocaleLowerCase("tr-TR"))){alert("Bu tür zaten listede.");return}
+ arr.push(name);
+ if(where==="kusevi"){names=arr;localStorage.setItem("vettakip_kusevi_turler",JSON.stringify(names));render()}
+ else{evadiNames=arr;localStorage.setItem("vettakip_evadi_turler",JSON.stringify(evadiNames));renderEVadiList()}
+}
+function removeSpecies(where,name){
+ if(!confirm(name+" türünü listeden çıkarmak istiyor musunuz? Mevcut adet ve tedavi kayıtları silinmeyecek; yalnızca listeden gizlenecek."))return;
+ if(where==="kusevi"){names=names.filter(x=>x!==name);localStorage.setItem("vettakip_kusevi_turler",JSON.stringify(names));render()}
+ else{evadiNames=evadiNames.filter(x=>x!==name);localStorage.setItem("vettakip_evadi_turler",JSON.stringify(evadiNames));renderEVadiList()}
+}
+
+function renderEVadiList(){
+ const root=document.getElementById("evadiSpecies");root.innerHTML="";
+ evadiNames.forEach((name,i)=>{let d=evadiData[name]||{count:0,records:[]},row=document.createElement("div");row.style.display="flex";row.style.gap="6px";row.style.alignItems="stretch";let b=document.createElement("button");b.className="species";b.style.flex="1";b.innerHTML='<span class="num">'+(i+1)+'</span><span style="flex:1"><b>'+esc(name)+'</b><br><small>Hayvan adedi: <b>'+(d.count||0)+'</b></small></span>›';b.onclick=()=>openEVadi(name);let rm=document.createElement("button");rm.className="danger";rm.textContent="Çıkar";rm.onclick=()=>removeSpecies("evadi",name);row.append(b,rm);root.appendChild(row)});
+}
+function openEVadi(name){evadiCurrent=name;if(!evadiData[name])evadiData[name]={count:0,records:[]};evadiList.classList.add("hidden");evadiDetail.classList.remove("hidden");evadiAnimalTitle.textContent=name;evadiCount.value=evadiData[name].count||0;evadiCountSaved.textContent="";evadiMode("individual");renderEVadiHistory()}
+function evadiHome(){evadiDetail.classList.add("hidden");evadiList.classList.remove("hidden");renderEVadiList()}
+function saveEVadiCount(){let n=Number(evadiCount.value);if(!Number.isInteger(n)||n<0){alert("Sıfır veya daha büyük tam sayı girin.");return}evadiData[evadiCurrent].count=n;saveEVadiData();evadiCountSaved.textContent="Hayvan adedi kaydedildi.";renderEVadiList()}
+function evadiMode(m){evadiTreatmentMode=m;evadiFormTitle.textContent=m==="individual"?"Bireysel tedavi":"Toplu tedavi";evadiIndTab.className=m==="individual"?"":"secondary";evadiGroupTab.className=m==="group"?"":"secondary";evadiForm.reset()}
+function saveEVadiTreatment(e){e.preventDefault();try{if(!evadiCurrent){alert("Önce hayvan türü seçin.");return}if(!evadiData[evadiCurrent])evadiData[evadiCurrent]={count:0,records:[]};if(!Array.isArray(evadiData[evadiCurrent].records))evadiData[evadiCurrent].records=[];evadiData[evadiCurrent].records.unshift({mode:evadiTreatmentMode,date:new Date().toLocaleString("tr-TR"),clinical:document.getElementById("evadiClinical").value.trim(),diagnosis:document.getElementById("evadiDiagnosis").value.trim(),meds:collectMeds("medEVadi"),operations:collectOperations("opEVadi")});saveEVadiData();e.target.reset();document.getElementById("medEVadi").innerHTML="";addMedRow("medEVadi");document.getElementById("opEVadi").innerHTML="";addOperationRow("opEVadi");renderEVadiHistory();alert("Tedavi kaydı kaydedildi.")}catch(err){console.error(err);alert("Tedavi kaydedilemedi. Tarayıcı depolamasını kontrol edin.")}}
+function renderEVadiHistory(){let a=evadiData[evadiCurrent].records||[];evadiHistory.innerHTML=a.length?a.map((r,i)=>'<div class="record"><b>'+(r.mode==="individual"?"Bireysel tedavi":"Toplu tedavi")+'</b> <small>· '+esc(r.date)+'</small><p><b>Klinik bulgular:</b><br>'+esc(r.clinical)+'</p><p><b>Teşhis - şüphe:</b><br>'+esc(r.diagnosis)+'</p>'+renderMeds(r.meds,r.treatment)+renderOperations(r.operations)+'<button class="secondary" onclick="editRecord(&quot;evadi&quot;, ' +i+')">Düzenle</button> <button class="danger" onclick="deleteEVadiTreatment('+i+')">Kaydı sil</button></div>').join(""):'<p class="muted">Henüz tedavi kaydı yok.</p>'}
+function deleteEVadiTreatment(i){if(confirm("Tedavi kaydı silinsin mi?")){evadiData[evadiCurrent].records.splice(i,1);saveEVadiData();renderEVadiHistory()}}
+function persist(){localStorage.setItem("vettakip_kusevi",JSON.stringify(data))}
+function render(){let el=document.getElementById("species");el.innerHTML="";names.forEach((n,i)=>{let d=data[n]||{count:0,records:[]},row=document.createElement("div");row.style.display="flex";row.style.gap="6px";row.style.alignItems="stretch";let b=document.createElement("button");b.className="species";b.style.flex="1";b.innerHTML='<span class="num">'+(i+1)+'</span><span style="flex:1"><b>'+esc(n)+'</b><br><small>Hayvan adedi: <b>'+(d.count||0)+'</b></small></span>›';b.onclick=()=>open(n);let rm=document.createElement("button");rm.className="danger";rm.textContent="Çıkar";rm.onclick=()=>removeSpecies("kusevi",n);row.append(b,rm);el.appendChild(row)})}
+function open(n){current=n;if(!data[n])data[n]={count:0,records:[]};list.classList.add("hidden");detail.classList.remove("hidden");back.classList.remove("hidden");title.textContent=n;count.value=data[n].count||0;saved.textContent="";tab("bireysel");historyRender()}
+function home(){detail.classList.add("hidden");list.classList.remove("hidden");back.classList.add("hidden");title.textContent="Kuşevi";sub.textContent="Tür kayıtları ve tedavi takip ekranı";render()}
+function saveCount(){let v=Number(count.value);if(!Number.isInteger(v)||v<0){alert("Sıfır veya daha büyük tam sayı girin.");return}data[current].count=v;persist();saved.textContent="Hayvan adedi kaydedildi.";render()}
+function tab(k){kind=k;formtitle.textContent=k==="bireysel"?"Bireysel tedavi":"Toplu tedavi";it.className=k==="bireysel"?"":"secondary";gt.className=k==="toplu"?"":"secondary";form.reset()}
+
+
+function addOperationRow(containerId, values={}){
+ const body=document.getElementById(containerId); if(!body)return;
+ const tr=document.createElement("tr");
+ tr.innerHTML='<td><input type="date" class="op-date" value="'+esc(values.date||new Date().toISOString().slice(0,10))+'"></td>'+
+ '<td><input type="text" class="op-name" placeholder="Operasyon adı" value="'+esc(values.name||"")+'"></td>'+
+ '<td><button type="button" class="danger" onclick="this.parentElement.parentElement.remove()">Sil</button></td>';
+ body.appendChild(tr);
+}
+function collectOperations(containerId){
+ const body=document.getElementById(containerId); if(!body)return [];
+ return [...body.querySelectorAll("tr")].map(tr=>({
+  date:tr.querySelector(".op-date").value,
+  name:tr.querySelector(".op-name").value.trim()
+ })).filter(o=>o.date||o.name);
+}
+function renderOperations(ops){
+ if(!ops||!ops.length)return "";
+ return '<p><b>Operasyonlar</b></p><div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>Operasyon adı</th></tr></thead><tbody>'+
+ ops.map(o=>'<tr><td>'+esc(o.date||"")+'</td><td>'+esc(o.name||"")+'</td></tr>').join("")+
+ '</tbody></table></div>';
+}
+function addMedRow(containerId, values={}){
+ const body=document.getElementById(containerId); if(!body)return;
+ const tr=document.createElement("tr");
+ const date=values.date||new Date().toISOString().slice(0,10);
+ const med=values.medicine||"", dose=values.dose||"", route=values.route||"";
+ tr.innerHTML='<td><input type="date" class="med-date" value="'+esc(date)+'"></td>'+
+ '<td><input type="text" class="med-name" placeholder="İlaç adı" value="'+esc(med)+'"></td>'+
+ '<td><input type="text" class="med-dose" placeholder="mg/kg, ml..." value="'+esc(dose)+'"></td>'+
+ '<td><select class="med-route route-select"><option value="">Seçiniz</option><option>Oral</option><option>IM</option><option>SC</option><option>IV</option><option>İntraartiküler</option><option>Topikal</option><option>Göz</option><option>Kulak</option><option>İçme suyu</option><option>Diğer</option></select></td>'+
+ '<td><button type="button" class="danger" onclick="this.closest(\'tr\').remove()">Sil</button></td>';
+ body.appendChild(tr);
+ tr.querySelector(".med-route").value=route;
+}
+function collectMeds(containerId){
+ const body=document.getElementById(containerId); if(!body)return [];
+ return [...body.querySelectorAll("tr")].map(tr=>({
+  date:tr.querySelector(".med-date").value,
+  medicine:tr.querySelector(".med-name").value.trim(),
+  dose:tr.querySelector(".med-dose").value.trim(),
+  route:tr.querySelector(".med-route").value
+ })).filter(m=>m.date||m.medicine||m.dose||m.route);
+}
+function renderMeds(meds,legacy){
+ if(meds&&meds.length)return '<div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>İlaç</th><th>Doz</th><th>Uygulama yolu</th></tr></thead><tbody>'+
+ meds.map(m=>'<tr><td>'+esc(m.date||"")+'</td><td>'+esc(m.medicine||"")+'</td><td>'+esc(m.dose||"")+'</td><td>'+esc(m.route||"")+'</td></tr>').join("")+
+ '</tbody></table></div>';
+ return legacy?'<p><b>Eski tedavi notu:</b><br>'+esc(legacy)+'</p>':'<p class="muted">İlaç kaydı girilmedi.</p>';
+}
+function save(e){e.preventDefault();try{if(!current){alert("Önce hayvan türü seçin.");return}if(!data[current])data[current]={count:0,records:[]};if(!Array.isArray(data[current].records))data[current].records=[];data[current].records.unshift({kind:kind,date:new Date().toLocaleString("tr-TR"),clinical:document.getElementById("clinical").value.trim(),diagnosis:document.getElementById("diagnosis").value.trim(),meds:collectMeds("medKusevi"),operations:collectOperations("opKusevi")});persist();document.getElementById("form").reset();document.getElementById("medKusevi").innerHTML="";addMedRow("medKusevi");document.getElementById("opKusevi").innerHTML="";addOperationRow("opKusevi");historyRender();document.getElementById("history")?.scrollIntoView({behavior:"smooth",block:"start"});alert("Tedavi kaydı kaydedildi.")}catch(err){console.error(err);alert("Kayıt kaydedilemedi. Cihaz hafızasında yer veya tarayıcı depolama iznini kontrol edin.")}}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function historyRender(){
+ const historyEl=document.getElementById("history");
+ if(!historyEl||!current)return;
+ const a=(data[current]&&Array.isArray(data[current].records))?data[current].records:[];
+ historyEl.innerHTML=a.length?a.map((r,i)=>'<div class="record"'+(i===0?' style="border:2px solid var(--g)"':'')+'><b>'+(r.kind==="bireysel"?"Bireysel tedavi":"Toplu tedavi")+'</b> <small>· '+esc(r.date||"")+'</small><p><b>Klinik bulgular:</b><br>'+esc(r.clinical||"")+'</p><p><b>Teşhis - şüphe:</b><br>'+esc(r.diagnosis||"")+'</p>'+renderMeds(r.meds,r.treatment)+renderOperations(r.operations)+'<button class="secondary" onclick="editRecord(&quot;kusevi&quot;, ' +i+')">Düzenle</button> <button class="danger" onclick="del('+i+')">Kaydı sil</button></div>').join(""):'<p class="muted">Henüz kayıt yok.</p>';
+}
+function del(i){if(confirm("Kayıt silinsin mi?")){data[current].records.splice(i,1);persist();historyRender()}}
+function editRecord(type,index){
+ let record,medBody,opBody;
+ if(type==='kusevi'){record=data[current].records[index];editTarget={type,index,key:current};}
+ else if(type==='park'){record=parkRecords[index];editTarget={type,index};}
+ else if(type==='chTreat'){record=chTreatments[index];editTarget={type,index};}
+ else if(type==='dog'){record=dogTreatments[index];editTarget={type,index};}
+ else if(type==='evadi'){record=evadiData[evadiCurrent].records[index];editTarget={type,index,key:evadiCurrent};}
+ if(!record)return;
+ document.getElementById('editClinical').value=record.clinical||'';document.getElementById('editDiagnosis').value=record.diagnosis||'';
+ medBody=document.getElementById('editMeds');opBody=document.getElementById('editOps');medBody.innerHTML='';opBody.innerHTML='';
+ (record.meds||[]).forEach(m=>addMedRow('editMeds',m));if(!(record.meds||[]).length)addMedRow('editMeds');
+ (record.operations||[]).forEach(o=>addOperationRow('editOps',o));if(!(record.operations||[]).length)addOperationRow('editOps');
+ document.getElementById('editModal').classList.remove('hidden');
+}
+function closeEdit(){document.getElementById('editModal').classList.add('hidden');editTarget=null}
+function saveEditedRecord(){
+ if(!editTarget)return;let t=editTarget,r;
+ if(t.type==='kusevi')r=data[t.key].records[t.index];else if(t.type==='park')r=parkRecords[t.index];else if(t.type==='chTreat')r=chTreatments[t.index];else if(t.type==='dog')r=dogTreatments[t.index];else if(t.type==='evadi')r=evadiData[t.key].records[t.index];
+ if(!r)return; r.clinical=document.getElementById('editClinical').value.trim();r.diagnosis=document.getElementById('editDiagnosis').value.trim();r.meds=collectMeds('editMeds');r.operations=collectOperations('editOps');
+ if(t.type==='kusevi')persist();else if(t.type==='park')localStorage.setItem('vettakip_ataturk_park',JSON.stringify(parkRecords));else if(t.type==='chTreat')saveCh('tedaviler',chTreatments);else if(t.type==='dog')localStorage.setItem('vettakip_kopek_tedaviler',JSON.stringify(dogTreatments));else if(t.type==='evadi')saveEVadiData();
+ closeEdit();if(t.type==='kusevi')historyRender();else if(t.type==='park')renderPark();else if(t.type==='chTreat'){renderChTreatments();renderChCats()}else if(t.type==='dog')renderDogHistory();else if(t.type==='evadi')renderEVadiHistory();alert('Kayıt güncellendi.');
+}
+function reportDateValue(v){if(!v)return "";let x=String(v).trim();let m=x.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return x.slice(0,10);m=x.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);if(m)return m[3]+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0");m=x.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(m)return m[3]+"-"+m[2].padStart(2,"0")+"-"+m[1].padStart(2,"0");return ""}
+function generateReport(){let selected=document.getElementById("reportDate").value||new Date().toISOString().slice(0,10),period=document.getElementById("reportPeriod").value;let end=new Date(selected+"T12:00:00"),start=new Date(end);if(period==="week")start.setDate(start.getDate()-6);if(period==="month"){start=new Date(end.getFullYear(),end.getMonth(),1);end=new Date(end.getFullYear(),end.getMonth()+1,0)}if(period==="day")start=new Date(end);let iso=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"),a=iso(start),b=iso(end);let rows=[];function add(section,kind,date,details){let d=reportDateValue(date);if(d&&d>=a&&d<=b)rows.push({section,kind,date,details})}function medText(r){return (r.meds||[]).map(m=>[m.medicine||m.drug||m.name,m.dose,m.route].filter(Boolean).join(" / ")).join(", ")}function opText(r){return (r.operations||[]).map(o=>[o.date,o.name||o.operation].filter(Boolean).join(" - ")).join(", ")}
+Object.entries(data).forEach(([sp,v])=>(v.records||[]).forEach(r=>add("Kuşevi - "+sp,r.kind==="bireysel"?"Bireysel tedavi":"Toplu tedavi",r.date,"Bulgular: "+(r.clinical||"")+" | Teşhis: "+(r.diagnosis||"")+" | İlaçlar: "+medText(r)+" | Operasyon: "+opText(r))));
+cats.forEach(r=>add("Kedi", "Kedi kaydı: "+(r.name||""),r.entry,"Çıkış: "+(r.exit||"")+" | Cinsiyet: "+(r.sex||"")+" | Renk: "+(r.color||"")+" | Bulgular: "+(r.clinical||"")+" | Teşhis: "+(r.diagnosis||"")+" | İlaçlar: "+medText(r)+" | Operasyon: "+opText(r)));
+parkRecords.forEach(r=>add("A. Park", "Kanatlı: "+r.species,r.date,"Bulgular: "+(r.clinical||"")+" | Teşhis: "+(r.diagnosis||"")+" | İlaçlar: "+medText(r)+" | Operasyon: "+opText(r)));
+chOps.forEach(r=>add("Kedi Evi", "İşlem: "+(r.type||r.operationType||""),r.date,"Not: "+(r.note||r.description||"")));
+chCats.forEach(r=>(r.births||[]).forEach(b=>add("Kedi Evi", "Doğum kaydı - Çip: "+(r.chip||""),String(b.year)+"-01-01","Yaş: "+(r.age||"")+" | Yer: "+(r.place||"")+" | Yıl: "+b.year+" | Yavru sayısı: "+b.count)));
+chTreatments.forEach(r=>add("Kedi Evi", "Tedavi - Çip: "+r.chip,r.date,"Bulgular: "+(r.clinical||"")+" | Teşhis: "+(r.diagnosis||"")+" | İlaçlar: "+medText(r)+" | Operasyon: "+opText(r)));
+hatches.forEach(r=>add("Kuluçkahane", "Yükleme: "+r.type,r.loadDate,"Yüklenen: "+r.loaded+" | Çıkan: "+r.hatched+" | Tahmini çıkım: "+r.expected));
+Object.entries(evadiData).forEach(([sp,v])=>(v.records||[]).forEach(r=>add("E. Vadi - "+sp,r.mode==="individual"?"Bireysel tedavi":"Toplu tedavi",r.date,"Bulgular: "+(r.clinical||"")+" | Teşhis: "+(r.diagnosis||"")+" | İlaçlar: "+medText(r)+" | Operasyon: "+opText(r))));
+dogTreatments.forEach(r=>add("Köpek",r.mode==="individual"?"Bireysel tedavi":"Toplu tedavi",r.date,"Bulgular: "+(r.clinical||"")+" | Teşhis: "+(r.diagnosis||"")+" | İlaçlar: "+medText(r)+" | Operasyon: "+opText(r)));
+rows.sort((x,y)=>reportDateValue(x.date).localeCompare(reportDateValue(y.date)));let label=period==="day"?"Gün sonu":period==="week"?"Hafta sonu":"Ay sonu";document.getElementById("reportPrint").innerHTML='<h2>VetTakip - '+label+' Raporu</h2><p><b>Dönem:</b> '+a+' - '+b+'</p><p><b>Toplam kayıt:</b> '+rows.length+'</p>'+(rows.length?rows.map((r,i)=>'<div class="record"><b>'+(i+1)+'. '+esc(r.section)+' · '+esc(r.kind)+'</b><p><b>Tarih:</b> '+esc(r.date)+'</p><p>'+esc(r.details)+'</p></div>').join(""):'<p>Bu tarih aralığında kayıt bulunamadı.</p>');}
+function printReport(){if(document.getElementById("reportPrint").innerText.includes("Rapor oluşturulmadı")){generateReport()}window.print()}
+function backup(){let json=JSON.stringify({kusevi:data,kediler:cats,kulucka:hatches,ataturkPark:parkRecords,kediEviIslemler:chOps,kediEviKediler:chCats,kediEviTedaviler:chTreatments,evadi:evadiData,kopekTedaviler:dogTreatments,kuseviTurler:names,evadiTurler:evadiNames},null,2);if(window.VetTakipAndroid&&typeof VetTakipAndroid.saveBackup==="function"){VetTakipAndroid.saveBackup(json);return}let a=document.createElement("a"),u=URL.createObjectURL(new Blob([json],{type:"application/json"}));a.href=u;a.download="VetTakip_Kusevi_Yedek.json";a.click();URL.revokeObjectURL(u)}
+function restore(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let z=JSON.parse(r.result);data=z.kusevi||z;cats=z.kediler||[];hatches=z.kulucka||[];parkRecords=z.ataturkPark||[];chOps=z.kediEviIslemler||[];chCats=z.kediEviKediler||[];chTreatments=z.kediEviTedaviler||[];evadiData=z.evadi||{};dogTreatments=z.kopekTedaviler||[];names=z.kuseviTurler||names;evadiNames=z.evadiTurler||evadiNames;persist();localStorage.setItem("vettakip_kediler",JSON.stringify(cats));localStorage.setItem("vettakip_kulucka",JSON.stringify(hatches));localStorage.setItem("vettakip_ataturk_park",JSON.stringify(parkRecords));saveCh("islemler",chOps);saveCh("kediler",chCats);saveCh("tedaviler",chTreatments); saveEVadiData();localStorage.setItem("vettakip_kopek_tedaviler",JSON.stringify(dogTreatments));localStorage.setItem("vettakip_kusevi_turler",JSON.stringify(names));localStorage.setItem("vettakip_evadi_turler",JSON.stringify(evadiNames));render();renderCats();renderHatches();renderPark();renderChOps();renderChCats();renderChTreatments();updateChCatSelect();renderEVadiList();renderDogHistory();alert("Yedek yüklendi.")}catch(x){alert("Dosya okunamadı.")}};r.readAsText(f);e.target.value=""}
+document.getElementById("reportDate").value=new Date().toISOString().slice(0,10);render();goDashboard();
+ ["medKusevi","medCat","medPark","medCatHouse","medEVadi","medDog"].forEach(id=>addMedRow(id)); ["opKusevi","opCat","opPark","opCatHouse","opEVadi","opDog"].forEach(id=>addOperationRow(id));
+ if(document.getElementById("birthYears").children.length===0)addBirthYear();
+</script>
+<div id="editModal" class="hidden" style="position:fixed;inset:0;background:#0009;z-index:9999;overflow:auto;padding:18px"><div class="panel" style="max-width:680px;margin:20px auto"><h2>Kaydı düzenle</h2><label>Klinik bulgular</label><textarea id="editClinical"></textarea><label>Teşhis - şüphe</label><textarea id="editDiagnosis"></textarea><label>Tedavi ilaçları</label><div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>İlaç</th><th>Doz</th><th>Uygulama yolu</th><th></th></tr></thead><tbody id="editMeds"></tbody></table></div><button type="button" class="secondary" onclick="addMedRow('editMeds')">+ İlaç satırı ekle</button><label>Operasyon</label><div class="table-wrap"><table class="med-table"><thead><tr><th>Tarih</th><th>Operasyon adı</th><th></th></tr></thead><tbody id="editOps"></tbody></table></div><button type="button" class="secondary" onclick="addOperationRow('editOps')">+ Operasyon satırı ekle</button><p><button type="button" onclick="saveEditedRecord()">Değişiklikleri kaydet</button> <button type="button" class="secondary" onclick="closeEdit()">Vazgeç</button></p></div></div>
+</body></html>
